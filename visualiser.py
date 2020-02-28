@@ -2,7 +2,8 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
 import numpy as np
-from synth import Synth
+from synth import Synth, square_wave, triangle_wave, sawtooth_wave
+import sys
 
 
 class WavePlot(pg.PlotWidget):
@@ -33,13 +34,17 @@ class WavePlot(pg.PlotWidget):
 
 
 class Frequencies(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, frequencies=None, amplitudes=None):
         super(Frequencies, self).__init__(parent=parent)
 
-        self.frequencies = []
-        self.amplitudes = []
-
-        # self.group = QGroupBox()
+        if frequencies is None:
+            self.frequencies = []
+        else:
+            self.frequencies = frequencies
+        if amplitudes is None:
+            self.amplitudes = []
+        else:
+            self.amplitudes = amplitudes
 
         self.freq_layout = QVBoxLayout()
         self.btn_add_freq = QPushButton('+')
@@ -50,19 +55,13 @@ class Frequencies(QWidget):
         self.setLayout(self.freq_layout)
         self.setMinimumWidth(400)
 
-        # self.group.setLayout(self.freq_layout)
-        # self.scroll = QScrollArea()
-        # self.scroll.setWidget(self.group)
-        # self.scroll.setWidgetResizable(True)
-        # self.scroll.setFixedHeight(400)
-        # self.scroll.setMinimumWidth(400)
-        # self.top_layout = QVBoxLayout(self)
-        # self.top_layout.addWidget(self.scroll)
+        for note in range(len(self.frequencies)):
+            self.add_frequency(self.frequencies[note], self.amplitudes[note])
 
-    def add_frequency(self):
-        if self.freq_layout.count() < 8:
+    def add_frequency(self, freq=None, amp=None):
+        if self.freq_layout.count() < 10:
             self.freq_layout.removeItem(self.stretch)
-            self.freq_layout.addWidget(FrequencyPicker(self))
+            self.freq_layout.addWidget(FrequencyPicker(self, freq=freq, amp=amp))
             self.freq_layout.addItem(self.stretch)
 
     def get_frequencies(self):
@@ -82,15 +81,22 @@ class Frequencies(QWidget):
 
 
 class FrequencyPicker(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, freq=None, amp=None):
         super(FrequencyPicker, self).__init__(parent=parent)
 
         self.parent = parent
 
         self.layout = QHBoxLayout()
 
-        self.freq = 0
-        self.amp = 0.5
+        if freq is None:
+            self.freq = 0
+        else:
+            self.freq = freq
+
+        if amp is None:
+            self.amp = 0.5
+        else:
+            self.amp = amp
 
         self.text_box = QLineEdit()
         self.text_box.setMaximumHeight(50)
@@ -107,7 +113,7 @@ class FrequencyPicker(QWidget):
         self.dial = QDial()
         self.dial.setMinimum(0)
         self.dial.setMaximum(100)
-        self.dial.setValue(50)
+        self.dial.setValue(self.amp * 100)
         self.dial.setMaximumHeight(50)
         self.dial.setMaximumWidth(50)
         self.dial.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
@@ -120,6 +126,9 @@ class FrequencyPicker(QWidget):
         self.layout.addWidget(self.btn_remove)
 
         self.setLayout(self.layout)
+
+        self.text_box.setText(f'{self.freq}')
+        self.update_slider()
 
         self.text_box.editingFinished.connect(self.update_slider)
         self.slider.valueChanged.connect(self.update_text)
@@ -142,17 +151,17 @@ class FrequencyPicker(QWidget):
 
 
 class MainWindow(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, notes=None, volumes=None):
         super(MainWindow, self).__init__(parent=parent)
 
-        self.resize(600, 600)
+        self.resize(800, 600)
 
         self.layout = QHBoxLayout()
 
         self.plot = WavePlot(self)
         self.layout.addWidget(self.plot)
 
-        self.freq = Frequencies(self)
+        self.freq = Frequencies(self, frequencies=notes, amplitudes=volumes)
         self.layout.addWidget(self.freq)
 
         self.setLayout(self.layout)
@@ -170,7 +179,37 @@ class MainWindow(QWidget):
 if __name__ == "__main__":
     app = QApplication([])
 
-    window = MainWindow()
+    if len(sys.argv) > 1:
+        f = 100.0
+        if len(sys.argv) > 2:
+            try:
+                f = float(sys.argv[2])
+            except ValueError:
+                pass
+
+        if sys.argv[1] == 'full':
+            window = MainWindow(notes=[f * h for h in range(1, 9)],
+                                volumes=np.zeros(8))
+        elif sys.argv[1] == 'odd':
+            window = MainWindow(notes=[f * h for h in range(1, 16, 2)],
+                                volumes=np.zeros(8))
+        elif sys.argv[1] == 'even':
+            window = MainWindow(notes=[f * h for h in range(2, 17, 2)],
+                                volumes=np.zeros(8))
+        elif sys.argv[1] == 'square':
+            notes, volumes = square_wave(f=f, order=8)
+            window = MainWindow(notes=notes, volumes=volumes)
+        elif sys.argv[1] == 'triangle':
+            notes, volumes = triangle_wave(f=f, order=8)
+            window = MainWindow(notes=notes, volumes=volumes)
+        elif sys.argv[1] == 'sawtooth':
+            notes, volumes = sawtooth_wave(f=f, order=8)
+            window = MainWindow(notes=notes, volumes=volumes)
+        else:
+            raise Exception(f'Unrecognised input argument {sys.argv[1]}')
+    else:
+        window = MainWindow()
+
     window.show()
 
     timer = pg.Qt.QtCore.QTimer()

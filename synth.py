@@ -95,16 +95,6 @@ class Synth:
             self.frame = next_frame[self._xfade_size:self._xfade_size+samples].copy()
             self._last_frame_cross = next_frame[-self._xfade_size:].copy()
 
-        # start = next_frame[0:self._cross_fade_size].copy()
-        #
-        # start = np.multiply(start, self._cross_fade)
-        # start += np.multiply(self._last_frame_cross, 1 - self._cross_fade)
-        #
-        # frame[0:self._cross_fade_size] = start
-        #
-        # self.frame = frame[0:-self._cross_fade_size]
-        # self._last_frame_cross = frame[-self._cross_fade_size:]
-
         return self.frame
 
     def stream_frame(self, in_data, frame_count, time_info, status_flags):
@@ -113,9 +103,37 @@ class Synth:
         return frame.tobytes(), self._status
 
 
-if __name__ == "__main__":
+def square_wave(f, order=20):
+    harmonics = np.arange(1, 2*order, 2)
+    notes = f * harmonics
+    volumes = [(4 / np.pi) * (1 / x) for x in harmonics]
 
-    synth = Synth([440.0])
+    return notes, volumes
+
+
+def triangle_wave(f, order=20):
+    harmonics = np.arange(0, order)
+
+    notes = [f * (2 * h + 1) for h in harmonics]
+    volumes = [(8 / pow(np.pi, 2)) * pow(-1, h) / pow(2 * h + 1, 2) for h in harmonics]
+
+    return notes, volumes
+
+
+def sawtooth_wave(f, order=20):
+    harmonics = np.arange(1, order)
+
+    notes = [f * h for h in harmonics]
+    volumes = [(2 / np.pi) * pow(-1, h) / h for h in harmonics]
+
+    return notes, volumes
+
+
+def play_laser_pulse():
+    notes = [1000 * pow(x / 200, 2) for x in range(200)]
+    volumes = [1 for _ in range(500)]
+
+    synth = Synth(notes, volumes, update_hz=6)
     synth.start()
 
     input()
