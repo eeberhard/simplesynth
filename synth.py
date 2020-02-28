@@ -4,7 +4,7 @@ import time
 
 
 class Synth:
-    def __init__(self, notes=None, volumes=None, update_hz=60):
+    def __init__(self, notes=None, volumes=None, update_hz=1):
         self.master_volume = 1
 
         if notes is not None:
@@ -19,7 +19,7 @@ class Synth:
 
         self._p = pyaudio.PyAudio()
         self._fs = 44100
-        self._frame_size = int(60 * self._fs / update_hz)
+        self._frame_size = int(self._fs / update_hz)
 
         self._stream = None
         self._status = pyaudio.paComplete

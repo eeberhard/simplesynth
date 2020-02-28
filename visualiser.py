@@ -166,7 +166,7 @@ class MainWindow(QWidget):
 
         self.setLayout(self.layout)
 
-        self.synth = Synth([], update_hz=1000)
+        self.synth = Synth([], update_hz=10)
         self.synth.start()
 
     def update(self):
